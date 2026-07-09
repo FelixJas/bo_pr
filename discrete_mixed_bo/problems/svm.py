@@ -4,8 +4,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 import math
 from typing import Optional, Tuple
+import pathlib
+import logging
+import pandas as pd
 
 import numpy as np
 import torch
@@ -15,6 +19,29 @@ from xgboost import XGBRegressor
 
 from discrete_mixed_bo.problems.base import DiscreteTestProblem
 
+DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
+
+def download_uci_data():
+    # From Bounce
+    if not pathlib.Path(DATA_PATH + "/slice_localization_data.csv").exists():
+        logging.info("slice_localization_data.csv not found. Downloading...")
+
+        url = "http://bounce-resources.s3-website-us-east-1.amazonaws.com/slice_localization_data.zip"
+        logging.info(f"Downloading {url}")
+
+        import requests
+        response = requests.get(url, verify=False)
+
+        with open(DATA_PATH + "/slice_localization_data.zip", "wb") as file:
+            file.write(response.content)
+        logging.info("Download completed.")
+        import zipfile
+
+        with zipfile.ZipFile(DATA_PATH + "/slice_localization_data.zip", "r") as zip_ref:
+            zip_ref.extractall(DATA_PATH)
+        # delete .zip file
+        pathlib.Path(DATA_PATH + "/slice_localization_data.zip").unlink()
+        logging.info("Data extracted!")
 
 def process_uci_data(
     data: np.ndarray, n_features: int
@@ -56,10 +83,19 @@ class SVMFeatureSelection(DiscreteTestProblem):
     def __init__(
         self,
         dim: int,
-        data: np.ndarray,
+        # data: np.ndarray,
+        data: Optional[np.ndarray] = None, 
         noise_std: Optional[float] = None,
         negate: bool = False,
     ) -> None:
+
+        if data is None:
+            download_uci_data()
+            df = pd.read_csv(DATA_PATH + "/slice_localization_data.csv")
+            if 'patientId' in df.columns:
+                df = df.drop(columns=['patientId'])
+            data = df.values
+
         n_features = dim - 3
         self.train_x, self.train_y, self.test_x, self.test_y = process_uci_data(
             data=data, n_features=n_features

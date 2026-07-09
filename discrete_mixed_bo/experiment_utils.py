@@ -631,7 +631,7 @@ def get_problem(name: str, dim: Optional[int] = None, **kwargs) -> DiscreteTestP
         return LABS(dim=dim, negate=True)
     elif name == "svm":
         data = kwargs.get("data")
-        assert data is not None
+        # assert data is not None
         assert dim is not None
         return SVMFeatureSelection(
             data=data,

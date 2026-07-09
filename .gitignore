@@ -133,3 +133,6 @@ dmypy.json
 
 # VS code stuff
 .vscode/settings.json
+
+# Data 
+discrete_mixed_bo/problems/data/
