@@ -1,0 +1,29 @@
+name: PR
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  # version alignment
+  - pytorch=1.11
+  - gpytorch=1.11
+
+  - torchvision
+  - torchaudio
+  - cudatoolkit
+  - botorch=0.7
+  - numpy<2
+
+  # General Data Science packages
+  - scipy
+  - jupyter
+  - matplotlib
+  - scikit-learn
+  - statsmodels
+  - xgboost
+  - pip
+  - pip:
+    - bayesian-optimization<1.4.0
+    - nevergrad
+    - -e .

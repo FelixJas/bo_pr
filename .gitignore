@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Slurm stuff
+/scripts/logs
+
+# VS code stuff
+.vscode/settings.json
