@@ -9,8 +9,8 @@ CONDA_DIR="/home/felix_jaspersen/miniconda3/etc/profile.d/conda.sh"
 CONDA_ENV="PR"
 LOG_DIR="${PROJECT_ROOT}/scripts/logs"
 
-JOB_NAME="svm_TR"
-SEED=42
+JOB_NAME="ackley13"
+SEED=44
 echo "Queuing batch size experiment: $JOB_NAME"
 
 sbatch <<EOF
@@ -18,7 +18,7 @@ sbatch <<EOF
 #SBATCH -J $JOB_NAME
 #SBATCH -p $PARTITION
 #SBATCH -c 4
-#SBATCH -t 06:00:00
+#SBATCH -t 10:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --mem=8gb
 #SBATCH --output=${LOG_DIR}/%J-${JOB_NAME}.out
