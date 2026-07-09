@@ -12,6 +12,7 @@ import json
 import os
 import sys
 from typing import Any, Dict
+import logging
 
 import torch
 
@@ -30,6 +31,11 @@ def fetch_data(kwargs: Dict[str, Any]) -> None:
 
 
 if __name__ == "__main__":
+
+    logging.basicConfig(
+        level=logging.INFO,
+    )
+
     current_dir = os.path.dirname(os.path.abspath(__file__))
     exp_dir = os.path.join(current_dir, sys.argv[1])
     config_path = os.path.join(exp_dir, "config.json")

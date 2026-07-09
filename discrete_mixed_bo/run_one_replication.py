@@ -10,6 +10,7 @@ Run one replication.
 import gc
 from time import time
 from typing import Callable, Dict, List, Optional
+import logging
 
 import nevergrad as ng
 import numpy as np
@@ -320,14 +321,21 @@ def run_one_replication(
     all_xs_trajs = []
     all_true_af_trajs = []
     one_hot_to_numeric = None
+
     for i in range(existing_iterations, iterations):
         loss_traj = []
         xs_traj = []
         true_af_traj = []
-        print(
-            f"Starting label {label}, seed {seed}, iteration {i}, "
-            f"time: {time()-start_time}, current best obj: {best_objs[-1]}."
+
+        # print(
+        #     f"Starting label {label}, seed {seed}, iteration {i}, "
+        #     f"time: {time()-start_time}, current best obj: {best_objs[-1]}."
+        # )
+
+        logging.info(
+            f"Starting label {label}, seed {seed}, iteration {i}, time: {time()-start_time:.2f}, current best obj: {best_objs[-1]:.4f}."
         )
+
         # Fit the model.
         mll, model, ecdfs = initialize_model(
             train_x=X,
@@ -538,12 +546,13 @@ def run_one_replication(
         if use_trust_region:
             old_length = trbo_state.length
             trbo_state = update_state(state=trbo_state, Y_next=new_y)
+
             if trbo_state.length != old_length:
-                print(
-                    f"TR length changed from {old_length:.3f} to {trbo_state.length:3f}"
-                )
+                # print(f"TR length changed from {old_length:.3f} to {trbo_state.length:3f}")
+                logging.info(f"TR length changed from {old_length:.3f} to {trbo_state.length:3f}")
             if trbo_state.restart_triggered:
-                print("Restarting trust region")
+                # print("Restarting trust region")
+                logging.info("Restarting trust region")
                 trbo_state = TurboState(
                     dim=base_function.effective_dim,
                     batch_size=batch_size,

@@ -3,13 +3,13 @@
 # Common variables
 PROJECT_ROOT="/home/felix_jaspersen/Repositories/bo_pr"
 EXEC_DIR="${PROJECT_ROOT}/experiments"
-PARTITION="oahu"
-# PARTITION="hawaii"
+# PARTITION="oahu"
+PARTITION="hawaii"
 CONDA_DIR="/home/felix_jaspersen/miniconda3/etc/profile.d/conda.sh"
 CONDA_ENV="PR"
 LOG_DIR="${PROJECT_ROOT}/scripts/logs"
 
-JOB_NAME="ackley"
+JOB_NAME="svm"
 SEED=42
 echo "Queuing batch size experiment: $JOB_NAME"
 
@@ -27,6 +27,6 @@ source $CONDA_DIR
 conda activate $CONDA_ENV
 
 cd $EXEC_DIR
-python main.py ackley13 pr__ei $SEED
+python main.py $JOB_NAME pr__ei $SEED
 
 EOF

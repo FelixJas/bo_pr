@@ -571,8 +571,10 @@ def get_problem(name: str, dim: Optional[int] = None, **kwargs) -> DiscreteTestP
         )
     elif name == "discrete_ackley":
         dim = 20
-        integer_bounds = torch.zeros(2, dim - 5)
-        integer_bounds[1, :5] = 2  # 3 values
+        integer_bounds = torch.zeros(2, dim - 5) # Lower bounds are zero
+
+        # Upper bounds
+        integer_bounds[1, :5] = 2  # 3 values (0, 1, 2)
         integer_bounds[1, 5:10] = 4  # 5 values
         integer_bounds[1, 10:15] = 9  # 10 values
         ackley = Ackley(dim=dim, negate=True)
@@ -603,6 +605,19 @@ def get_problem(name: str, dim: Optional[int] = None, **kwargs) -> DiscreteTestP
         integer_bounds = torch.zeros(2, dim - 3)
         integer_bounds[1, :5] = 2  # 3 values
         integer_bounds[1, dim - 8 :] = 4  # 5 values
+        return DiscretizedBotorchTestProblem(
+            problem=ackley,
+            integer_indices=list(range(dim - 3)),
+            integer_bounds=integer_bounds,
+        )
+    elif name == "ackley53":
+        dim = 53
+        ackley = Ackley(dim=dim, negate=True)
+        ackley.bounds[0, :-3] = 0
+        ackley.bounds[1] = 1
+        ackley.bounds[0, -3:] = -1
+        integer_bounds = torch.zeros(2, dim - 3)
+        integer_bounds[1] = 1  # 2 values
         return DiscretizedBotorchTestProblem(
             problem=ackley,
             integer_indices=list(range(dim - 3)),
