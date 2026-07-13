@@ -1,5 +1,5 @@
 {
-  "iterations": 100,
+  "iterations": 200,
   "dim": 53,
   "function_name": "ackley53",
   "batch_size": 1,
