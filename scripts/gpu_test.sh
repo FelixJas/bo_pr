@@ -9,8 +9,8 @@ CONDA_DIR="/home/felix_jaspersen/miniconda3/etc/profile.d/conda.sh"
 CONDA_ENV="PR"
 LOG_DIR="${PROJECT_ROOT}/scripts/logs"
 
-JOB_NAME="ackley13"
-SEED=44
+JOB_NAME="GPU_Test"
+SEED=0
 echo "Queuing batch size experiment: $JOB_NAME"
 
 sbatch <<EOF
@@ -27,6 +27,6 @@ source $CONDA_DIR
 conda activate $CONDA_ENV
 
 cd $EXEC_DIR
-srun python main.py $JOB_NAME pr__ei $SEED
+python -c "import torch; print('cuda available:', torch.cuda.is_available()); print('device count:', torch.cuda.device_count())" nvidia-smi
 
 EOF
