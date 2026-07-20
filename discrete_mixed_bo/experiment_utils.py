@@ -65,6 +65,7 @@ from discrete_mixed_bo.problems.base import (
 )
 from discrete_mixed_bo.problems.binary import LABS, Contamination
 from discrete_mixed_bo.problems.cco.cco import CCO
+from discrete_mixed_bo.problems.continuous import ShiftedAckleyActiveDim
 from discrete_mixed_bo.problems.chemistry import Chemistry
 from discrete_mixed_bo.problems.coco_mixed_integer import Sphere
 from discrete_mixed_bo.problems.environmental import Environmental
@@ -623,9 +624,28 @@ def get_problem(name: str, dim: Optional[int] = None, **kwargs) -> DiscreteTestP
             integer_indices=list(range(dim - 3)),
             integer_bounds=integer_bounds,
         )
+    #TODO: These are new benchmarks added, check if these work as expected.
+    elif name == "cont_ackley6":
+        # Purely continuous, low-dimensional: every coordinate is active.
+        return ShiftedAckleyActiveDim(dim=6, active_dim=6, negate=True)
+    elif name == "cont_ackley_hd":
+        # Purely continuous, high-dimensional with a low number of active dims.
+        # Matches bounce's ShiftedAckley10 with FUNCTION_DIMENSIONALITY = 50.
+        return ShiftedAckleyActiveDim(dim=dim or 50, active_dim=10, negate=True)
+    #TODO: Added problem kwargs here. Check that these are the same in PR.
+    # Also, they should be set through environment.yaml.
     elif name == "contamination":
         assert dim is not None
-        return Contamination(dim=dim, negate=True)
+        # lamda and random_seed are exposed because bounce's Contamination uses
+        # lamda=1e-2 and random_seed=42, while the defaults here are 0.0 and 0.
+        # Those choices change the objective, so they must be matched explicitly
+        # when comparing the two codebases.
+        return Contamination(
+            dim=dim,
+            negate=True,
+            lamda=kwargs.get("lamda", 0.0),
+            random_seed=kwargs.get("random_seed", 0),
+        )
     elif name == "labs":
         assert dim is not None
         return LABS(dim=dim, negate=True)

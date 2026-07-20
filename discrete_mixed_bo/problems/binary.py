@@ -145,10 +145,12 @@ class LABS(DiscreteTestProblem):
             x = x.squeeze(0)
         x = x.numpy()
         N = x.shape[0]
-        E = 0
+        # Spins in {-1, +1}. The autocorrelation C_k runs over j = 0 .. N-k-1,
+        # and the merit factor is N^2 / (2E); the negative is returned so that
+        # negate=True yields the (maximized) merit factor.
+        s = 2.0 * x - 1.0
+        E = 0.0
         for k in range(1, N):
-            C_k = 0
-            for j in range(0, N - k - 1):
-                C_k += (-1) ** (1 - x[j] * x[j + k])
+            C_k = float(np.sum(s[: N - k] * s[k:]))
             E += C_k**2
-        return -1.0 * N / (2 * E)
+        return -1.0 * N**2 / (2 * E)
