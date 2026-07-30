@@ -327,11 +327,6 @@ def run_one_replication(
         xs_traj = []
         true_af_traj = []
 
-        # print(
-        #     f"Starting label {label}, seed {seed}, iteration {i}, "
-        #     f"time: {time()-start_time}, current best obj: {best_objs[-1]}."
-        # )
-
         logging.info(
             f"Starting label {label}, seed {seed}, iteration {i}, time: {time()-start_time:.2f}, current best obj: {best_objs[-1]:.4f}."
         )
