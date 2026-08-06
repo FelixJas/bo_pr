@@ -65,6 +65,7 @@ from discrete_mixed_bo.problems.base import (
 )
 from discrete_mixed_bo.problems.binary import LABS, Contamination
 from discrete_mixed_bo.problems.cco.cco import CCO
+from discrete_mixed_bo.problems.cocabo import Func2C, Func3C
 from discrete_mixed_bo.problems.continuous import ShiftedAckleyActiveDim
 from discrete_mixed_bo.problems.chemistry import Chemistry
 from discrete_mixed_bo.problems.coco_mixed_integer import Sphere
@@ -632,6 +633,14 @@ def get_problem(name: str, dim: Optional[int] = None, **kwargs) -> DiscreteTestP
         # Purely continuous, high-dimensional with a low number of active dims.
         # Matches bounce's ShiftedAckley10 with FUNCTION_DIMENSIONALITY = 50.
         return ShiftedAckleyActiveDim(dim=dim or 50, active_dim=10, negate=True)
+    elif name == "func2C":
+        # CoCaBO's mixed synthetic: 2 categoricals (3 and 5 categories) + 2
+        # continuous dims. Unequal cardinalities, and the optimum is not at
+        # all-zeros -- see problems/cocabo.py.
+        return Func2C(negate=True)
+    elif name == "func3C":
+        # CoCaBO's mixed synthetic: 3 categoricals (3, 5, 4) + 2 continuous dims.
+        return Func3C(negate=True)
     #TODO: Added problem kwargs here. Check that these are the same in PR.
     # Also, they should be set through environment.yaml.
     elif name == "contamination":
