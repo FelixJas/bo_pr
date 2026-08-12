@@ -21,34 +21,43 @@ class DiscreteTestProblem(BaseTestProblem):
         negate: bool = False,
         integer_indices: Optional[List[int]] = None,
         categorical_indices: Optional[List[int]] = None,
-    ) -> None:
+        ) -> None:
+
         super().__init__(negate=negate, noise_std=noise_std)
-        self._setup(
-            integer_indices=integer_indices, categorical_indices=categorical_indices
-        )
+        self._setup(integer_indices=integer_indices, categorical_indices=categorical_indices)
+
 
     def _setup(
         self,
         integer_indices: Optional[List[int]] = None,
         categorical_indices: Optional[List[int]] = None,
-    ) -> None:
+        ) -> None:
+
+        # Saving indices of original order
         dim = self.bounds.shape[-1]
         discrete_indices = []
         if integer_indices is None:
             integer_indices = []
         if categorical_indices is None:
             categorical_indices = []
+
+        ## Integer indices
         self.register_buffer(
             "_orig_integer_indices", torch.tensor(integer_indices, dtype=torch.long)
         )
         discrete_indices.extend(integer_indices)
+
+        ## Categorical indices
         self.register_buffer(
             "_orig_categorical_indices",
             torch.tensor(sorted(categorical_indices), dtype=torch.long),
         )
         discrete_indices.extend(categorical_indices)
+
         if len(discrete_indices) == 0:
             raise ValueError("Expected at least one discrete feature.")
+
+        ## Continuous indices
         cont_indices = sorted(list(set(range(dim)) - set(discrete_indices)))
         self.register_buffer(
             "_orig_cont_indices",
@@ -59,24 +68,27 @@ class DiscreteTestProblem(BaseTestProblem):
             ),
         )
         self.register_buffer("_orig_bounds", self.bounds.clone())
-        # remap inputs so that categorical features come after all of
-        # the ordinal features
+
+
+        # Remap inputs so that categorical features come after all of the ordinal features
         remapper = torch.zeros(
             self.bounds.shape[-1], dtype=torch.long, device=self.bounds.device
         )
         reverse_mapper = remapper.clone()
-        for i, orig_idx in enumerate(
-            cont_indices + integer_indices + categorical_indices
-        ):
+        for i, orig_idx in enumerate(cont_indices + integer_indices + categorical_indices):
             remapper[i] = orig_idx
             reverse_mapper[orig_idx] = i
+
         self.register_buffer("_remapper", remapper)
         self.register_buffer("_reverse_mapper", reverse_mapper)
-        self.bounds = self.bounds[:, remapper]
         self.register_buffer("cont_indices", reverse_mapper[cont_indices])
         self.register_buffer("integer_indices", reverse_mapper[integer_indices])
         self.register_buffer("categorical_indices", reverse_mapper[categorical_indices])
 
+        # Internal order follows [continuous | ordinal | categorical]
+        self.bounds = self.bounds[:, remapper]
+
+        # Effective dimensionality refers to needed one-hot-encoding volume of categorical variables.
         self.effective_dim = (
             self.cont_indices.shape[0]
             + self.integer_indices.shape[0]
@@ -90,6 +102,7 @@ class DiscreteTestProblem(BaseTestProblem):
         one_hot_bounds[:, self.integer_indices] = self.integer_bounds
         one_hot_bounds[:, self.cont_indices] = self.cont_bounds
         self.register_buffer("one_hot_bounds", one_hot_bounds)
+
 
     def forward(self, X: Tensor, noise: bool = True) -> Tensor:
         r"""Evaluate the function on a set of points.
@@ -112,6 +125,7 @@ class DiscreteTestProblem(BaseTestProblem):
         if self.negate:
             f = -f
         return f if batch else f.squeeze(0)
+
 
     def evaluate_slack(self, X: Tensor, noise: bool = True) -> Tensor:
         r"""Evaluate the constraint function on a set of points.

@@ -66,6 +66,7 @@ from discrete_mixed_bo.problems.base import (
 from discrete_mixed_bo.problems.binary import LABS, Contamination
 from discrete_mixed_bo.problems.cco.cco import CCO
 from discrete_mixed_bo.problems.cocabo import Func2C, Func3C
+from discrete_mixed_bo.problems.roi_metric import ROIMetric
 from discrete_mixed_bo.problems.continuous import ShiftedAckleyActiveDim
 from discrete_mixed_bo.problems.chemistry import Chemistry
 from discrete_mixed_bo.problems.coco_mixed_integer import Sphere
@@ -641,6 +642,11 @@ def get_problem(name: str, dim: Optional[int] = None, **kwargs) -> DiscreteTestP
     elif name == "func3C":
         # CoCaBO's mixed synthetic: 3 categoricals (3, 5, 4) + 2 continuous dims.
         return Func3C(negate=True)
+    elif name == "roi_metric":
+        # ROI matching: 5 integer dims [0, 1000] + 1 continuous + 2 binary.
+        #
+        # negate=False, this score is a maximization objective already. 
+        return ROIMetric(negate=False)
     #TODO: Added problem kwargs here. Check that these are the same in PR.
     # Also, they should be set through environment.yaml.
     elif name == "contamination":
