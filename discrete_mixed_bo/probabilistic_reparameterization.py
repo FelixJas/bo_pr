@@ -181,7 +181,8 @@ class AbstractProbabilisticReparameterization(AcquisitionFunctionWrapper, ABC):
             ),
         )
         self.model = acq_function.model  # for sample_around_best heuristic
-        # moving average baseline
+
+        # REINFORCE Baseline: Moving Average 
         self.register_buffer(
             "ma_counter",
             torch.zeros(1, dtype=torch.double, device=integer_bounds.device),
@@ -196,23 +197,32 @@ class AbstractProbabilisticReparameterization(AcquisitionFunctionWrapper, ABC):
         )
 
     def sample_candidates(self, X: Tensor) -> Tensor:
+        # Adam works on unit cube [0, 1]
+        # But generally, integers like [0, 5] are also supported, requiring the unnormalize
         if "unnormalize" in self.input_transform:
             unnormalized_X = self.input_transform["unnormalize"](X)
         else:
             unnormalized_X = X.clone()
+
         prob = self.input_transform["round"].get_rounding_prob(X=unnormalized_X)
         discrete_idx = 0
+
+        # Integer variables
         for i in self.integer_indices:
             p = prob[..., discrete_idx]
+            # Coin flip
             rounding_component = torch.distributions.Bernoulli(probs=p).sample()
+            # Flooring is to support non-binary integer values
             unnormalized_X[..., i] = unnormalized_X[..., i].floor() + rounding_component
             discrete_idx += 1
+        # Clamp values, e.g. avoid floor(1)=1 + rounding_component=1 = 2 which is invalid for a binary variable.
         unnormalized_X[..., self.integer_indices] = torch.minimum(
             torch.maximum(
                 unnormalized_X[..., self.integer_indices], self.integer_bounds[0]
             ),
             self.integer_bounds[1],
         )
+
         # this is the starting index for the categoricals in unnormalized_X
         raw_idx = self.cont_indices.shape[0] + discrete_idx
         if self.categorical_indices.shape[0] > 0:
@@ -227,9 +237,11 @@ class AbstractProbabilisticReparameterization(AcquisitionFunctionWrapper, ABC):
                 unnormalized_X[..., raw_idx:raw_end] = z
                 discrete_idx = discrete_end
                 raw_idx = raw_end
-        # normalize X
+
+        # normalize X, again for non-binary integer variables
         if "normalize" in self.input_transform:
             return self.input_transform["normalize"](unnormalized_X)
+
         return unnormalized_X
 
     @abstractmethod
@@ -496,6 +508,7 @@ class _MCProbabilisticReparameterization(Function):
                 dim=-1
             )  # average over samples from proposal distribution
             ctx.acq_values = acq_values
+
             # update moving average baseline
             ctx.ma_hidden = ma_hidden.clone()
             ctx.ma_counter = ctx.ma_counter.clone()
@@ -503,6 +516,7 @@ class _MCProbabilisticReparameterization(Function):
             decay = 0.7
             ma_counter.add_(1)
             ma_hidden.sub_((ma_hidden - acq_values.detach().mean()) * (1 - decay))
+
             if ctx.needs_input_grad[0]:
                 if grad_estimator in ("arm", "u2g"):
                     if input_tf["round"].categorical_starts.shape[0] > 0:
@@ -573,6 +587,7 @@ class _MCProbabilisticReparameterization(Function):
                 acq_values.shape + rounding_component.shape[-2:]
             )
             prob = ctx.prob.unsqueeze(-3)
+
             if ctx.grad_estimator in ("arm", "u2g"):
                 rounding_component_flip = ctx.rounding_component_flip
                 acq_values_flip = ctx.acq_values_flip
@@ -595,20 +610,22 @@ class _MCProbabilisticReparameterization(Function):
                         * prob_abs
                         * (rounding_component_flip - rounding_component)
                     )
+
             elif ctx.grad_estimator == "reinforce":
                 sample_level = expanded_acq_values * (rounding_component - prob)
+
+            # reinforce with the moving average baseline
             elif ctx.grad_estimator == "reinforce_ma":
-                # use reinforce with the moving average baseline
+                # Avoid division by zero
                 if ctx.ma_counter == 0:
                     baseline = 0.0
                 else:
                     decay = 0.7
                     baseline = ctx.ma_hidden / (1.0 - torch.pow(decay, ctx.ma_counter))
-                sample_level = (expanded_acq_values - baseline) * (
-                    rounding_component - prob
-                )
+                sample_level = (expanded_acq_values - baseline) * (rounding_component - prob) # (z-p)
 
-            grads = (sample_level / ctx.tau).mean(dim=-3)
+            # Score function of a sigmoid to get gradients
+            grads = (sample_level / ctx.tau).mean(dim=-3) # (z-p)/tau
 
             new_grads = (
                 grad_output.view(

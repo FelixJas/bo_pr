@@ -383,10 +383,11 @@ class AnalyticProbabilisticReparameterizationInputTransform(InputTransform, Modu
         self.register_buffer("all_discrete_options", all_discrete_options)
 
     def get_rounding_prob(self, X: Tensor) -> Tensor:
-        # todo consolidate this the MCProbabilisticReparameterizationInputTransform
+        #TODO: consolidate this the MCProbabilisticReparameterizationInputTransform
         X_prob = X.detach().clone()
+
+        # compute probabilities for integers
         if self.integer_indices is not None:
-            # compute probabilities for integers
             X_int = X_prob[..., self.integer_indices]
             X_int_abs = X_int.abs()
             offset = X_int_abs.floor()
@@ -396,6 +397,7 @@ class AnalyticProbabilisticReparameterizationInputTransform(InputTransform, Modu
                 )
             else:
                 X_prob[..., self.integer_indices] = X_int_abs - offset
+
         # compute probabilities for categoricals
         for start, end in zip(self.categorical_starts, self.categorical_ends):
             X_categ = X_prob[..., start:end]
@@ -405,6 +407,7 @@ class AnalyticProbabilisticReparameterizationInputTransform(InputTransform, Modu
                 )
             else:
                 X_prob[..., start:end] = X_categ / X_categ.sum(dim=-1)
+
         return X_prob[..., self.discrete_indices]
 
     def get_probs(self, X: Tensor) -> Tensor:
@@ -428,6 +431,7 @@ class AnalyticProbabilisticReparameterizationInputTransform(InputTransform, Modu
             *([1] * (X.ndim - 2)), self.all_discrete_options.shape[0], *X.shape[-2:]
         ).expand(*X.shape[:-2], self.all_discrete_options.shape[0], *X.shape[-2:])
         X = X.unsqueeze(-3)
+
         if self.integer_indices is not None:
             # compute probabilities for integers
             X_int = X[..., self.integer_indices]
@@ -478,14 +482,12 @@ class AnalyticProbabilisticReparameterizationInputTransform(InputTransform, Modu
         all_discrete_options = self.all_discrete_options.view(
             *([1] * (X.ndim - 3)), self.all_discrete_options.shape[0], *X.shape[-2:]
         ).expand(*X.shape[:-3], self.all_discrete_options.shape[0], *X.shape[-2:])
-        if X.shape[-1] > n_discrete:
-            X = X.expand(
-                *X.shape[:-3], self.all_discrete_options.shape[0], *X.shape[-2:]
-            )
-            return torch.cat(
-                [X[..., :-n_discrete], all_discrete_options[..., -n_discrete:]], dim=-1
-            )
-        return self.all_discrete_options
+
+        if X.shape[-1] > n_discrete: # at least one continuous column
+            X = X.expand(*X.shape[:-3], self.all_discrete_options.shape[0], *X.shape[-2:])
+            return torch.cat([X[..., :-n_discrete], all_discrete_options[..., -n_discrete:]], dim=-1)
+
+        return self.all_discrete_options #BUG: This is not returning the expected shape on purely combinatorial benchmarks
 
     def equals(self, other: InputTransform) -> bool:
         r"""Check if another input transform is equivalent.
@@ -612,8 +614,9 @@ class MCProbabilisticReparameterizationInputTransform(InputTransform, Module):
 
     def get_rounding_prob(self, X: Tensor) -> Tensor:
         X_prob = X.detach().clone()
+
+        # compute probabilities for integers
         if self.integer_indices is not None:
-            # compute probabilities for integers
             X_int = X_prob[..., self.integer_indices]
             X_int_abs = X_int.abs()
             offset = X_int_abs.floor()
@@ -623,6 +626,7 @@ class MCProbabilisticReparameterizationInputTransform(InputTransform, Module):
                 )
             else:
                 X_prob[..., self.integer_indices] = X_int_abs - offset
+
         # compute probabilities for categoricals
         for start, end in zip(self.categorical_starts, self.categorical_ends):
             X_categ = X_prob[..., start:end]
@@ -632,6 +636,7 @@ class MCProbabilisticReparameterizationInputTransform(InputTransform, Module):
                 )
             else:
                 X_prob[..., start:end] = X_categ / X_categ.sum(dim=-1)
+
         return X_prob[..., self.discrete_indices]
 
     def transform(self, X: Tensor) -> Tensor:

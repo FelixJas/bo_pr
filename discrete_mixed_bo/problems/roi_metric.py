@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-r"""The ROI-matching synthetic with non-linear categorical-continuous interactions.
+r"""
+Region of Interest (ROI) matching: 5 integer-valued + 1 continuous + 2 binary parameters.
 
-A region of interest `(x1, y1, W, H)` is scored against a target box whose position
-and size are switched by two binary variables, with a continuous variable arbitrating
-which of the two error kinds matters more.
+A region of interest `(x1, y1, W, H)` is scored against a target box whose
+position and size are switched by two binary variables `c` and `d`, with a
+continuous `b` arbitrating which of the two error kinds matters more.
 
 Variable order (the benchmark's natural order, shared with bounce):
 
