@@ -588,12 +588,12 @@ class MCProbabilisticReparameterizationInputTransform(InputTransform, Module):
             start = None
             for i, n_categories in categorical_features.items():
                 if start is None:
-                    start = i
+                    start = i   #NOTE: Only the FIRST key is ever read
                 end = start + n_categories
                 categorical_starts.append(start)
                 categorical_ends.append(end)
                 discrete_indices += list(range(start, end))
-                start = end
+                start = end     #NOTE: Every later start comes from addiong widths.
         self.register_buffer(
             "discrete_indices", torch.tensor(discrete_indices, dtype=torch.long)
         )

@@ -420,7 +420,7 @@ def get_qEHVI(
 
 def get_acqf(
     label: str,
-    mc_samples: int,
+    mc_samples: int, # NOTE: I think these are MC samples of batched acquisition which was never implemented here.
     model: GPyTorchModel,
     X_baseline: Tensor,
     train_Y: Tensor,
@@ -434,20 +434,26 @@ def get_acqf(
     **kwargs,
 ) -> Union[AcquisitionFunction, List[AcquisitionFunction]]:
     r"""Combines a few of the above utils to construct the acqf."""
+
     if base_function.is_moo:
         ref_point = standardize_tf(base_function.ref_point.unsqueeze(0))[0].squeeze(0)
     is_constrained = isinstance(base_function, ConstrainedBaseTestProblem)
+
     if is_constrained and label[-2:] != "ei":
         raise NotImplementedError("Only EI is currently supported with constraints.")
+
     num_constraints = base_function.num_constraints if is_constrained else 0
+
     if base_function.objective_weights is not None:
         posterior_transform = ScalarizedPosteriorTransform(
             weights=base_function.objective_weights
         )
     else:
         posterior_transform = None
+
     if label[-3:] == "ucb":
         beta = 0.2 * X_baseline.shape[-1] * log(2 * iteration)
+
     if ("exact_round" in label) or ("enumerate" in label):
         if isinstance(model, ModelListGP):
             models = model.models
@@ -465,6 +471,7 @@ def get_acqf(
                 )
             else:
                 model.input_transform = exact_rounding_func
+
     if batch_size == 1:
         if label[-2:] == "ei":
             acq_func = get_EI(
@@ -481,6 +488,7 @@ def get_acqf(
                 beta=beta,
                 posterior_transform=posterior_transform,
             )
+            
         elif label[-2:] == "ts" or label[-7:] == "nehvi-1":
             model = get_gp_sample_w_transforms(
                 model=model,
@@ -501,6 +509,7 @@ def get_acqf(
                     train_Y=preds,
                     ref_point=ref_point,
                 )
+
         elif label[-4:] == "ehvi":
             acq_func = get_EHVI(
                 model=model,
@@ -509,6 +518,7 @@ def get_acqf(
             )
         else:
             raise NotImplementedError
+
     if "pr" in label:
         if kwargs.get("pr_use_analytic", False):
             acq_func = AnalyticProbabilisticReparameterization(

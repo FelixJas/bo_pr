@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 r"""
-Region of Interest (ROI) matching: 5 integer-valued + 1 continuous + 2 binary parameters.
+Region of Interest (ROI) matching: 4 integer-valued + 1 continuous + 2 binary parameters.
 
 A region of interest `(x1, y1, W, H)` is scored against a target box whose
 position and size are switched by two binary variables `c` and `d`, with a
@@ -15,10 +15,9 @@ idx  name      domain             role
 1    `y1`      int `[0, 1000]`    box corner, y
 2    `W`       int `[0, 1000]`    box width
 3    `H`       int `[0, 1000]`    box height
-4    `a`       int `[0, 1000]`    decoupled parabola, optimal at 420
-5    `b`       float `[0, 1]`     weights size accuracy against position accuracy
-6    `c`       binary             position target: 0 -> (200, 700), 1 -> (700, 800)
-7    `d`       binary             size target:     0 -> (100, 100), 1 -> (300, 300)
+4    `b`       float `[0, 1]`     weights size accuracy against position accuracy
+5    `c`       binary             position target: 0 -> (200, 700), 1 -> (700, 800)
+6    `d`       binary             size target:     0 -> (100, 100), 1 -> (300, 300)
 ===  ========  =================  ==================================================
 
 A matching implementation lives in bounce (`bounce/bounce/benchmarks.py`, class
@@ -33,7 +32,7 @@ from discrete_mixed_bo.problems.base import DiscreteTestProblem
 
 
 class ROIMetric(DiscreteTestProblem):
-    r"""ROI matching: 5 integer + 1 continuous + 2 binary dimensions.
+    r"""ROI matching: 4 integer + 1 continuous + 2 binary dimensions.
 
     The binaries are declared as integers with bounds `[0, 1]`, the same convention
     `ackley53` and `contamination` use in this repo.
@@ -44,17 +43,17 @@ class ROIMetric(DiscreteTestProblem):
     ...) are stated as minimization problems and BoTorch's optimizers maximize.
     """
 
-    # x1, y1, W, H, a  |  b  |  c, d
-    _integer_indices: List[int] = [0, 1, 2, 3, 4, 6, 7]
+    # x1, y1, W, H  |  b  |  c, d
+    _integer_indices: List[int] = [0, 1, 2, 3, 5, 6]
 
     def __init__(
         self,
         noise_std: Optional[float] = None,
         negate: bool = False,
     ) -> None:
-        self.dim = 8
+        self.dim = 7
         self._bounds = (
-            [(0.0, 1000.0)] * 5  # x1, y1, W, H, a
+            [(0.0, 1000.0)] * 4  # x1, y1, W, H
             + [(0.0, 1.0)]  # b
             + [(0.0, 1.0)] * 2  # c, d
         )
@@ -65,15 +64,15 @@ class ROIMetric(DiscreteTestProblem):
         )
 
     def _evaluate_single(self, x: Tensor) -> Tensor:
-        r"""Evaluate one 8-dim point given in the benchmark's natural order.
+        r"""Evaluate one 7-dim point given in the benchmark's natural order.
 
         Here, `c` and `d` arrive as 0/1 rather than as "Low"/"High".
         """
         # Round the discrete dims so a continuous relaxation cannot score a box the
         # problem does not admit -- bounce's benchmarks do the same on entry.
-        x1, y1, W, H, a = (float(torch.round(v)) for v in x[:5])
-        b = float(x[5])
-        c, d = (int(torch.round(v)) for v in x[6:8])
+        x1, y1, W, H = (float(torch.round(v)) for v in x[:4])
+        b = float(x[4])
+        c, d = (int(torch.round(v)) for v in x[5:7])
 
         # Switch targets based on C, D
         target_x, target_y = (200, 700) if c == 0 else (700, 800)
@@ -93,21 +92,17 @@ class ROIMetric(DiscreteTestProblem):
         matching_error = (0.2+0.8*b) * (w_err + h_err) + (0.2+0.8*(1-b)) * (x_err + y_err)
 
         # Metric 2
-        # Independent challenge
-        a_err = ((a-420) / 25) ** 2
-
-        # Metric 3
         # Box should stay within FOV. Going over is allowed but expensive.
         wh_penalty = 0.4*max(x1+W-1000,0) + 0.4*max(y1+H-1000,0)
 
-        # Metric 4
+        # Metric 3
         # Make "high/ high" the best option so it actually has to deal with optimizing b.
         single_optimum_penalty = 0
         if c == 0 or d == 0:
             single_optimum_penalty = 30
 
-        # Preference for b=1 over b=0.
-        score = 990 + 10*b - a_err - matching_error - wh_penalty - single_optimum_penalty
+        # Preference for b=1 over b=0. The constant 10 puts the global optimum at exactly 0.
+        score = 10 + 10*b - matching_error - wh_penalty - single_optimum_penalty
 
         return torch.as_tensor(score, dtype=x.dtype, device=x.device)
 
